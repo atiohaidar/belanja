@@ -1,0 +1,1862 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Catat Belanja Smart Voice</title>
+    <!-- Font Awesome 6 Free (MIT / SIL Open License) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            width: 100%;
+            overflow-x: hidden;
+            background-color: #f1f5f9;
+            color: #1e293b;
+        }
+
+        body {
+            padding-top: calc(92px + env(safe-area-inset-top, 0px));
+            padding-bottom: calc(105px + env(safe-area-inset-bottom, 0px));
+            max-width: 540px;
+            margin: 0 auto;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 1. STICKY HEADER (Sisa Saldo & Progress) */
+        .sticky-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            max-width: 540px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-bottom: 1px solid #e2e8f0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+            z-index: 99;
+            padding: calc(10px + env(safe-area-inset-top, 0px)) 14px 10px 14px;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .header-title {
+            font-size: 0.78rem;
+            color: #64748b;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            letter-spacing: 0.5px;
+        }
+
+        .header-title i {
+            color: #2563eb;
+        }
+
+        .budget-edit-btn {
+            background: none;
+            border: none;
+            color: #2563eb;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        .budget-edit-btn:active {
+            background: #eff6ff;
+        }
+
+        .budget-display-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+
+        .spent-summary {
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .spent-summary span {
+            font-weight: bold;
+            color: #ef4444;
+        }
+
+        .remaining-summary {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: #1e40af;
+        }
+
+        .remaining-summary.warning {
+            color: #ea580c;
+        }
+
+        .remaining-summary.danger {
+            color: #dc2626;
+        }
+
+        .header-progress-bg {
+            background: #e2e8f0;
+            height: 6px;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 6px;
+        }
+
+        .header-progress-fill {
+            height: 100%;
+            width: 0%;
+            background: #16a34a;
+            transition: width 0.3s ease, background-color 0.3s ease;
+        }
+
+        .budget-edit-box {
+            display: none;
+            background: #f8fafc;
+            padding: 8px 10px;
+            border-radius: 8px;
+            margin-top: 8px;
+            border: 1px solid #cbd5e1;
+        }
+
+        .budget-edit-box.active {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        /* 2. MAIN CONTENT AREA */
+        .content-area {
+            padding: 12px 14px;
+            flex: 1;
+            width: 100%;
+        }
+
+        .action-bar {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        .btn-action {
+            padding: 9px 6px;
+            border-radius: 8px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #334155;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .btn-action:active {
+            background: #f1f5f9;
+        }
+
+        .list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            padding: 0 2px;
+        }
+
+        .list-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .item-count {
+            font-size: 0.8rem;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        /* Search Bar Input Group */
+        .search-box-group {
+            display: flex;
+            align-items: center;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            padding: 2px 10px;
+            margin-bottom: 10px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+        }
+
+        .search-box-group i {
+            color: #94a3b8;
+            font-size: 0.85rem;
+            margin-right: 8px;
+        }
+
+        .search-input {
+            flex: 1;
+            border: none;
+            outline: none;
+            padding: 8px 0;
+            font-size: 0.88rem;
+            background: transparent;
+            color: #0f172a;
+        }
+
+        .search-clear-btn {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 0.85rem;
+            cursor: pointer;
+            padding: 4px;
+            display: none;
+        }
+
+        .search-clear-btn.active {
+            display: block;
+        }
+
+        .item-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+        }
+
+        /* ELEGANT TWO-ROW ITEM CARD DESIGN */
+        .item-card {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 12px 14px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: 100%;
+            transition: border-color 0.2s ease;
+        }
+
+        .card-row-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .item-name {
+            font-weight: 700;
+            font-size: 1rem;
+            color: #0f172a;
+            word-break: break-word;
+            line-height: 1.3;
+        }
+
+        .item-subtotal-group {
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .subtotal-label {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: #94a3b8;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .item-subtotal-val {
+            font-weight: 800;
+            font-size: 1rem;
+            color: #1e40af;
+        }
+
+        .card-row-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 6px;
+            border-top: 1px dashed #f1f5f9;
+        }
+
+        .unit-price-tag {
+            font-size: 0.78rem;
+            color: #64748b;
+            background: #f8fafc;
+            padding: 3px 8px;
+            border-radius: 6px;
+            border: 1px solid #f1f5f9;
+        }
+
+        .card-controls-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Qty Controls Pill */
+        .qty-pill {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: #f1f5f9;
+            padding: 3px 6px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .btn-qty {
+            width: 26px;
+            height: 26px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            font-weight: bold;
+            font-size: 0.75rem;
+            color: #334155;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-qty:active {
+            background: #e2e8f0;
+        }
+
+        .qty-num {
+            font-size: 0.85rem;
+            font-weight: 700;
+            min-width: 18px;
+            text-align: center;
+        }
+
+        .btn-card-icon {
+            background: none;
+            border: none;
+            color: #64748b;
+            font-size: 0.88rem;
+            cursor: pointer;
+            padding: 4px 6px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-card-icon.edit-btn:hover, .btn-card-icon.edit-btn:active {
+            color: #2563eb;
+            background: #eff6ff;
+        }
+
+        .btn-card-icon.delete-btn:hover, .btn-card-icon.delete-btn:active {
+            color: #dc2626;
+            background: #fef2f2;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 36px 16px;
+            color: #94a3b8;
+            background: #ffffff;
+            border-radius: 12px;
+            border: 1px dashed #cbd5e1;
+            font-size: 0.85rem;
+            line-height: 1.6;
+        }
+
+        .empty-state i {
+            font-size: 2.2rem;
+            color: #cbd5e1;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        /* 3. STICKY BOTTOM BAR */
+        .sticky-bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            max-width: 540px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-top: 1px solid #e2e8f0;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.05);
+            padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px)) 12px;
+            z-index: 99;
+        }
+
+        .bottom-controls-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+
+        .toggles-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toggle-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            color: #334155;
+            user-select: none;
+        }
+
+        .toggle-item i {
+            font-size: 0.85rem;
+        }
+
+        .toggle-item input {
+            width: 14px;
+            height: 14px;
+        }
+
+        .btn-settings-icon {
+            background: none;
+            border: none;
+            color: #2563eb;
+            font-size: 0.85rem;
+            cursor: pointer;
+            padding: 2px 4px;
+        }
+
+        .input-bar-group {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            width: 100%;
+        }
+
+        .smart-input-bottom {
+            flex: 1;
+            min-width: 0;
+            font-size: 0.95rem;
+            padding: 11px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            outline: none;
+        }
+
+        .smart-input-bottom:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+        }
+
+        .btn-mic-main {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 11px 16px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .btn-mic-main.recording {
+            background: #dc2626;
+            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.5);
+            animation: pulse 1.2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.5); }
+            70% { box-shadow: 0 0 0 10px rgba(220, 38, 38, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+        }
+
+        .btn-send-manual {
+            background: #f1f5f9;
+            color: #475569;
+            border: 1px solid #cbd5e1;
+            padding: 11px 14px;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .voice-status-bar {
+            font-size: 0.75rem;
+            color: #dc2626;
+            font-weight: 700;
+            text-align: center;
+            margin-top: 4px;
+            display: none;
+        }
+
+        .voice-status-bar.active {
+            display: block;
+        }
+
+        /* 4. NOTIFICATION BANNER / TOAST FOR ADDED ITEMS */
+        .added-item-toast {
+            position: fixed;
+            top: calc(92px + env(safe-area-inset-top, 0px));
+            left: 14px;
+            right: 14px;
+            max-width: 512px;
+            margin: 0 auto;
+            background: #0f766e;
+            color: #ccfbf1;
+            border: 1px solid #14b8a6;
+            padding: 10px 14px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .added-item-toast.show {
+            display: flex;
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .toast-content {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .toast-icon {
+            font-size: 1.3rem;
+            color: #5eead4;
+            flex-shrink: 0;
+        }
+
+        .toast-text-group {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 0;
+        }
+
+        .toast-title {
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #99f6e4;
+            font-weight: 700;
+        }
+
+        .toast-item-detail {
+            font-size: 0.88rem;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .toast-close-btn {
+            background: none;
+            border: none;
+            color: #ccfbf1;
+            font-size: 1rem;
+            cursor: pointer;
+            padding: 4px;
+            flex-shrink: 0;
+        }
+
+        /* 5. MODAL SHEETS (PREVIEW, HISTORY & VOICE SETTINGS) */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 101;
+            display: none;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-sheet {
+            background: #ffffff;
+            width: 100%;
+            max-width: 540px;
+            border-top-left-radius: 18px;
+            border-top-right-radius: 18px;
+            padding: 18px;
+            padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+            box-shadow: 0 -6px 24px rgba(0,0,0,0.15);
+            animation: slideUp 0.25s ease-out;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .modal-title {
+            font-size: 0.98rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-title-text {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .modal-title i {
+            color: #2563eb;
+        }
+
+        .modal-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .modal-grid label {
+            font-size: 0.72rem;
+            color: #64748b;
+            margin-bottom: 3px;
+            display: block;
+            font-weight: 600;
+        }
+
+        .modal-grid input {
+            padding: 9px 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            outline: none;
+        }
+
+        .modal-grid input:focus {
+            border-color: #2563eb;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-modal-confirm {
+            flex: 2;
+            background: #16a34a;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn-modal-cancel {
+            flex: 1;
+            background: #f1f5f9;
+            color: #475569;
+            border: none;
+            padding: 12px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+        }
+
+        .voice-settings-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .voice-settings-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .voice-settings-group label {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #334155;
+        }
+
+        .voice-select {
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            font-size: 0.88rem;
+            outline: none;
+            background: white;
+        }
+
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .history-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .history-date {
+            font-size: 0.88rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .history-meta {
+            font-size: 0.78rem;
+            color: #64748b;
+        }
+
+        .history-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .btn-history-load {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-history-del {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+            padding: 6px 8px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 1. STICKY HEADER (ALWAYS VISIBLE AT TOP) -->
+    <div class="sticky-header">
+        <div class="header-top">
+            <div class="header-title">
+                <i class="fa-solid fa-wallet"></i>
+                <span>SISA SALDO</span>
+                <span id="progressPercentBadge" style="font-size:0.75rem; color:#64748b;">(0% terpakai)</span>
+            </div>
+            <button class="budget-edit-btn" onclick="toggleBudgetEdit()">
+                <i class="fa-solid fa-pen-to-square"></i> Ubah Target
+            </button>
+        </div>
+
+        <div class="budget-display-row">
+            <div class="remaining-summary" id="headerRemaining">Rp 1.000.000</div>
+            <div class="spent-summary">Total: <span id="headerSpent">Rp 0</span></div>
+        </div>
+
+        <div class="header-progress-bg">
+            <div class="header-progress-fill" id="headerProgressBar"></div>
+        </div>
+
+        <!-- Hidden Quick Edit Box -->
+        <div class="budget-edit-box" id="budgetEditBox">
+            <label style="font-size:0.8rem; font-weight:600;">Target Anggaran:</label>
+            <input type="text" id="budgetInput" style="width:120px; font-weight:bold; padding:6px 8px; border:1px solid #cbd5e1; border-radius:6px;" value="1.000.000" oninput="formatBudgetInput(this)">
+            <button onclick="toggleBudgetEdit()" style="padding:6px 10px; font-size:0.75rem; background:#2563eb; color:white; border:none; border-radius:6px; font-weight:bold;">Selesai</button>
+        </div>
+    </div>
+
+    <!-- NOTIFICATION BANNER WHEN ITEM IS ADDED / EDITED -->
+    <div class="added-item-toast" id="addedItemToast">
+        <div class="toast-content">
+            <i class="fa-solid fa-circle-check toast-icon" id="toastIcon"></i>
+            <div class="toast-text-group">
+                <span class="toast-title" id="toastTitleHeader">BERHASIL DITAMBAHKAN</span>
+                <span class="toast-item-detail" id="toastDetail">Telur (3x Rp 20.000 = Rp 60.000)</span>
+            </div>
+        </div>
+        <button class="toast-close-btn" onclick="hideToastNotification()">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+    </div>
+
+    <!-- 2. MAIN SCROLLABLE CONTENT -->
+    <div class="content-area">
+        <div class="action-bar">
+            <button class="btn-action" onclick="copySummaryToClipboard()">
+                <i class="fa-solid fa-copy"></i> Salin Ringkasan
+            </button>
+            <button class="btn-action" onclick="saveCurrentSessionToHistory()">
+                <i class="fa-solid fa-floppy-disk"></i> Simpan Sesi
+            </button>
+            <button class="btn-action" onclick="openHistoryModal()">
+                <i class="fa-solid fa-clock-rotate-left"></i> Riwayat
+            </button>
+        </div>
+
+        <!-- SEARCH BAR -->
+        <div class="search-box-group">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="searchInput" class="search-input" placeholder="Cek / cari barang di daftar..." oninput="handleSearchInput(this.value)">
+            <button class="search-clear-btn" id="searchClearBtn" onclick="clearSearchInput()" title="Bersihkan Pencarian">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="list-header">
+            <span class="list-title">Daftar Barang Belanja</span>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span class="item-count" id="itemCount">0 Item</span>
+                <button onclick="resetAllItems()" style="background:none; border:none; color:#dc2626; font-size:0.78rem; font-weight:600; cursor:pointer;" title="Reset Belanja">
+                    <i class="fa-solid fa-rotate-left"></i> Reset
+                </button>
+            </div>
+        </div>
+
+        <ul class="item-list" id="itemList">
+            <li class="empty-state">
+                <i class="fa-solid fa-basket-shopping"></i>
+                Belum ada barang belanjaan.<br>
+                Tekan tombol <strong>Bicara</strong> di bawah atau ketikkan barang Anda!
+            </li>
+        </ul>
+    </div>
+
+    <!-- 3. STICKY BOTTOM BAR (NATURAL THUMB ZONE) -->
+    <div class="sticky-bottom-bar">
+        <div class="bottom-controls-row">
+            <span>Diktekan Suara / Teks:</span>
+            <div class="toggles-group">
+                <label class="toggle-item">
+                    <input type="checkbox" id="ttsToggle" onchange="saveTTSSetting()">
+                    <i class="fa-solid fa-volume-high" style="color:#2563eb;"></i>
+                    <span>Suara</span>
+                </label>
+                <button class="btn-settings-icon" onclick="openVoiceSettingsModal()" title="Pengaturan Suara (Pria/Wanita/Suara Perangkat)">
+                    <i class="fa-solid fa-gear"></i>
+                </button>
+                <label class="toggle-item">
+                    <input type="checkbox" id="fastModeToggle" onchange="saveFastModePreference()">
+                    <i class="fa-solid fa-bolt" style="color:#d97706;"></i>
+                    <span>Auto-Add</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="input-bar-group">
+            <input type="text" id="rawInput" class="smart-input-bottom" placeholder="Contoh: telur 20 ribu 3" autocomplete="off">
+            
+            <button class="btn-send-manual" onclick="processSmartInput()" title="Proses Teks">
+                <i class="fa-solid fa-paper-plane"></i>
+            </button>
+
+            <button class="btn-mic-main" id="btnMic" onclick="toggleVoiceRecognition()">
+                <i class="fa-solid fa-microphone" id="micIcon"></i>
+                <span id="micText">Bicara</span>
+            </button>
+        </div>
+
+        <div class="voice-status-bar" id="voiceStatusBar">
+            <i class="fa-solid fa-circle-dot"></i> Mendengarkan... Silakan sebutkan barang belanjaan
+        </div>
+    </div>
+
+    <!-- 4. PREVIEW / EDIT BOTTOM SHEET MODAL -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-sheet">
+            <div class="modal-title" id="modalHeaderTitle">
+                <div class="modal-title-text">
+                    <i class="fa-solid fa-magnifying-glass" id="modalHeaderIcon"></i>
+                    <span id="modalHeaderText">Konfirmasi Barang Belanja</span>
+                </div>
+            </div>
+            <div class="modal-grid">
+                <div>
+                    <label>Nama Barang</label>
+                    <input type="text" id="pName">
+                </div>
+                <div>
+                    <label>Harga Satuan</label>
+                    <input type="number" id="pPrice">
+                </div>
+                <div>
+                    <label>Jumlah (Qty)</label>
+                    <input type="number" id="pQty" min="1">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-modal-cancel" onclick="closeModal()">Batal</button>
+                <button class="btn-modal-confirm" id="btnModalConfirm" onclick="confirmAddItem()">
+                    <i class="fa-solid fa-plus" id="btnModalIcon"></i> <span id="btnModalConfirmText">Tambahkan</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. HISTORY MODAL -->
+    <div class="modal-overlay" id="historyModalOverlay">
+        <div class="modal-sheet">
+            <div class="modal-title">
+                <div class="modal-title-text">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span>Riwayat Sesi Belanja</span>
+                </div>
+                <button onclick="closeHistoryModal()" style="background:none; border:none; font-size:1.1rem; color:#64748b; cursor:pointer;">✕</button>
+            </div>
+
+            <div class="history-list" id="historyListContainer">
+                <!-- History items populated via JS -->
+            </div>
+
+            <button class="btn-modal-cancel" style="width:100%;" onclick="closeHistoryModal()">Tutup</button>
+        </div>
+    </div>
+
+    <!-- 6. VOICE SETTINGS MODAL (PILIH SUARA PRIA / WANITA & NADAM) -->
+    <div class="modal-overlay" id="voiceSettingsModalOverlay">
+        <div class="modal-sheet">
+            <div class="modal-title">
+                <div class="modal-title-text">
+                    <i class="fa-solid fa-sliders"></i>
+                    <span>Pengaturan Suara Balikan (TTS)</span>
+                </div>
+                <button onclick="closeVoiceSettingsModal()" style="background:none; border:none; font-size:1.1rem; color:#64748b; cursor:pointer;">✕</button>
+            </div>
+
+            <div class="voice-settings-form">
+                <div class="voice-settings-group">
+                    <label for="voiceSelect">Pilih Suara Perangkat (Pria / Wanita):</label>
+                    <select id="voiceSelect" class="voice-select" onchange="saveVoiceSelection()"></select>
+                </div>
+
+                <div class="voice-settings-group">
+                    <label for="voicePitch">Nada Suara (Pitch / Kedalaman):</label>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span style="font-size:0.75rem; color:#64748b;">Rendah (Pria)</span>
+                        <input type="range" id="voicePitch" min="0.5" max="1.5" step="0.05" value="0.9" style="flex:1;" onchange="saveVoiceSelection()">
+                        <span style="font-size:0.75rem; color:#64748b;">Tinggi</span>
+                    </div>
+                </div>
+
+                <button class="btn-modal-confirm" style="background:#2563eb;" onclick="testVoiceSpeech()">
+                    <i class="fa-solid fa-volume-high"></i> Tes Suara Balikan
+                </button>
+            </div>
+
+            <button class="btn-modal-cancel" style="width:100%;" onclick="closeVoiceSettingsModal()">Selesai</button>
+        </div>
+    </div>
+
+    <script>
+        let shoppingItems = [];
+        let shoppingHistory = [];
+        let totalBudget = 1000000;
+        let isListening = false;
+        let recognition = null;
+        let fastMode = false;
+        let ttsEnabled = true;
+        let selectedVoiceURI = "";
+        let selectedVoicePitch = 0.9; // Lower pitch makes voice sound deeper / male-like
+        let searchQuery = "";
+        let toastTimeout = null;
+        let editingItemId = null;
+        let availableVoices = [];
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadFromLocalStorage();
+            initSpeechRecognition();
+            initSpeechSynthesisVoices();
+        });
+
+        function saveToLocalStorage() {
+            try {
+                localStorage.setItem('belanja_items', JSON.stringify(shoppingItems));
+                localStorage.setItem('belanja_history', JSON.stringify(shoppingHistory));
+                localStorage.setItem('belanja_budget', totalBudget.toString());
+                localStorage.setItem('belanja_fastmode', fastMode.toString());
+                localStorage.setItem('belanja_tts', ttsEnabled.toString());
+                localStorage.setItem('belanja_voice_uri', selectedVoiceURI);
+                localStorage.setItem('belanja_voice_pitch', selectedVoicePitch.toString());
+            } catch(e) {
+                console.error("LocalStorage save error", e);
+            }
+        }
+
+        function loadFromLocalStorage() {
+            try {
+                const savedItems = localStorage.getItem('belanja_items');
+                const savedHistory = localStorage.getItem('belanja_history');
+                const savedBudget = localStorage.getItem('belanja_budget');
+                const savedFastMode = localStorage.getItem('belanja_fastmode');
+                const savedTTS = localStorage.getItem('belanja_tts');
+                const savedVoiceURI = localStorage.getItem('belanja_voice_uri');
+                const savedPitch = localStorage.getItem('belanja_voice_pitch');
+
+                if (savedItems) shoppingItems = JSON.parse(savedItems);
+                if (savedHistory) shoppingHistory = JSON.parse(savedHistory);
+                if (savedBudget) {
+                    totalBudget = parseInt(savedBudget) || 1000000;
+                    document.getElementById('budgetInput').value = totalBudget.toLocaleString('id-ID');
+                }
+                if (savedFastMode) {
+                    fastMode = savedFastMode === 'true';
+                    document.getElementById('fastModeToggle').checked = fastMode;
+                }
+                if (savedTTS !== null) {
+                    ttsEnabled = savedTTS === 'true';
+                }
+                document.getElementById('ttsToggle').checked = ttsEnabled;
+                if (savedVoiceURI) selectedVoiceURI = savedVoiceURI;
+                if (savedPitch) {
+                    selectedVoicePitch = parseFloat(savedPitch);
+                    document.getElementById('voicePitch').value = selectedVoicePitch;
+                }
+            } catch(e) {
+                console.error("LocalStorage load error", e);
+            }
+            renderItems();
+            updateSummary();
+        }
+
+        function saveTTSSetting() {
+            ttsEnabled = document.getElementById('ttsToggle').checked;
+            saveToLocalStorage();
+            if (ttsEnabled) {
+                speakReadout("Suara konfirmasi diaktifkan");
+            }
+        }
+
+        // Initialize Speech Synthesis Voices list
+        function initSpeechSynthesisVoices() {
+            if (!window.speechSynthesis) return;
+
+            function populateVoices() {
+                availableVoices = window.speechSynthesis.getVoices();
+                const voiceSelect = document.getElementById('voiceSelect');
+                voiceSelect.innerHTML = '';
+
+                if (availableVoices.length === 0) return;
+
+                // Prioritize Indonesian voices first
+                let idVoices = availableVoices.filter(v => v.lang.toLowerCase().includes('id'));
+                let otherVoices = availableVoices.filter(v => !v.lang.toLowerCase().includes('id'));
+                let sortedVoices = [...idVoices, ...otherVoices];
+
+                sortedVoices.forEach(voice => {
+                    const option = document.createElement('option');
+                    option.value = voice.voiceURI;
+                    
+                    // Identify if voice looks like Male / Female
+                    let genderTag = "";
+                    let vName = voice.name.toLowerCase();
+                    if (vName.includes('male') || vName.includes('ardi') || vName.includes('pria') || vName.includes('boy')) {
+                        genderTag = " (👨 Pria)";
+                    } else if (vName.includes('female') || vName.includes('gadis') || vName.includes('wanita') || vName.includes('girl')) {
+                        genderTag = " (👩 Wanita)";
+                    }
+
+                    option.textContent = `${voice.name} [${voice.lang}]${genderTag}`;
+                    if (selectedVoiceURI && voice.voiceURI === selectedVoiceURI) {
+                        option.selected = true;
+                    }
+                    voiceSelect.appendChild(option);
+                });
+
+                // Auto pick first indonesian voice if none selected
+                if (!selectedVoiceURI && idVoices.length > 0) {
+                    // Try to find a male indonesian voice first if available
+                    let maleID = idVoices.find(v => v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('ardi'));
+                    if (maleID) {
+                        selectedVoiceURI = maleID.voiceURI;
+                    } else {
+                        selectedVoiceURI = idVoices[0].voiceURI;
+                    }
+                    voiceSelect.value = selectedVoiceURI;
+                }
+            }
+
+            populateVoices();
+            if (speechSynthesis.onvoiceschanged !== undefined) {
+                speechSynthesis.onvoiceschanged = populateVoices;
+            }
+        }
+
+        function openVoiceSettingsModal() {
+            initSpeechSynthesisVoices();
+            document.getElementById('voiceSettingsModalOverlay').classList.add('active');
+        }
+
+        function closeVoiceSettingsModal() {
+            document.getElementById('voiceSettingsModalOverlay').classList.remove('active');
+        }
+
+        function saveVoiceSelection() {
+            const voiceSelect = document.getElementById('voiceSelect');
+            if (voiceSelect.value) {
+                selectedVoiceURI = voiceSelect.value;
+            }
+            selectedVoicePitch = parseFloat(document.getElementById('voicePitch').value) || 0.9;
+            saveToLocalStorage();
+        }
+
+        function testVoiceSpeech() {
+            saveVoiceSelection();
+            speakReadout("Ini adalah tes suara balikan. Telur 20 ribu rupiah, beli 3, total 60 ribu rupiah. Sisa saldo 940 ribu rupiah.");
+        }
+
+        // Detailed Speech Synthesis Readout
+        function speakReadout(text) {
+            if (!ttsEnabled || !window.speechSynthesis) return;
+            try {
+                window.speechSynthesis.cancel();
+                const utter = new SpeechSynthesisUtterance(text);
+                
+                if (selectedVoiceURI && availableVoices.length > 0) {
+                    const voiceObj = availableVoices.find(v => v.voiceURI === selectedVoiceURI);
+                    if (voiceObj) {
+                        utter.voice = voiceObj;
+                        utter.lang = voiceObj.lang;
+                    }
+                } else {
+                    utter.lang = 'id-ID';
+                }
+
+                utter.pitch = selectedVoicePitch; // Pitch control (0.85-0.9 makes voice sound deeper / male)
+                utter.rate = 1.0;
+                window.speechSynthesis.speak(utter);
+            } catch(e) {
+                console.warn("TTS Error", e);
+            }
+        }
+
+        function formatSpokenRupiah(num) {
+            if (num <= 0) return "nol rupiah";
+            if (num >= 1000000) {
+                let jt = Math.floor(num / 1000000);
+                let sisa = Math.round((num % 1000000) / 1000);
+                return sisa > 0 ? `${jt} juta ${sisa} ribu rupiah` : `${jt} juta rupiah`;
+            }
+            if (num >= 1000) {
+                let rb = Math.round(num / 1000);
+                return `${rb} ribu rupiah`;
+            }
+            return `${num} rupiah`;
+        }
+
+        function toggleBudgetEdit() {
+            const box = document.getElementById('budgetEditBox');
+            box.classList.toggle('active');
+        }
+
+        function saveFastModePreference() {
+            fastMode = document.getElementById('fastModeToggle').checked;
+            saveToLocalStorage();
+        }
+
+        function handleSearchInput(val) {
+            searchQuery = val.trim().toLowerCase();
+            const clearBtn = document.getElementById('searchClearBtn');
+            if (searchQuery.length > 0) {
+                clearBtn.classList.add('active');
+            } else {
+                clearBtn.classList.remove('active');
+            }
+            renderItems();
+        }
+
+        function clearSearchInput() {
+            const input = document.getElementById('searchInput');
+            input.value = "";
+            searchQuery = "";
+            document.getElementById('searchClearBtn').classList.remove('active');
+            renderItems();
+        }
+
+        function initSpeechRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+            if (SpeechRecognition) {
+                recognition = new SpeechRecognition();
+                recognition.lang = 'id-ID';
+                recognition.continuous = false;
+                recognition.interimResults = false;
+
+                recognition.onstart = function() {
+                    isListening = true;
+                    const btnMic = document.getElementById('btnMic');
+                    btnMic.classList.add('recording');
+                    document.getElementById('micIcon').className = 'fa-solid fa-circle-dot';
+                    document.getElementById('micText').textContent = 'Stop';
+                    document.getElementById('voiceStatusBar').classList.add('active');
+                };
+
+                recognition.onresult = function(event) {
+                    const transcript = event.results[0][0].transcript;
+                    document.getElementById('rawInput').value = transcript;
+                    stopListening();
+                    processSmartInput();
+                };
+
+                recognition.onerror = function(event) {
+                    console.warn("Voice Recognition Error:", event.error);
+                    stopListening();
+                    if (event.error === 'not-allowed') {
+                        alert("Izin mikrofon belum aktif di browser. Gunakan voice keyboard HP Anda.");
+                    }
+                };
+
+                recognition.onend = function() {
+                    stopListening();
+                };
+            }
+        }
+
+        function toggleVoiceRecognition() {
+            if (!recognition) {
+                alert("Browser ini memerlukan koneksi HTTPS / Voice Keyboard bawaan HP untuk rekaman suara langsung.");
+                return;
+            }
+
+            if (isListening) {
+                recognition.stop();
+                stopListening();
+            } else {
+                try {
+                    recognition.start();
+                } catch (e) {
+                    console.error("Error starting recognition:", e);
+                }
+            }
+        }
+
+        function stopListening() {
+            isListening = false;
+            const btnMic = document.getElementById('btnMic');
+            if (btnMic) {
+                btnMic.classList.remove('recording');
+                document.getElementById('micIcon').className = 'fa-solid fa-microphone';
+                document.getElementById('micText').textContent = 'Bicara';
+            }
+            const statusEl = document.getElementById('voiceStatusBar');
+            if (statusEl) {
+                statusEl.classList.remove('active');
+            }
+        }
+
+        const wordToNum = {
+            'nol': 0, 'satu': 1, 'dua': 2, 'tiga': 3, 'empat': 4, 'lima': 5,
+            'enam': 6, 'tujuh': 7, 'delapan': 8, 'sembilan': 9, 'sepuluh': 10,
+            'sebelas': 11, 'seratus': 100, 'seribu': 1000, 'sejuta': 1000000
+        };
+
+        function formatRupiah(num) {
+            return 'Rp ' + num.toLocaleString('id-ID');
+        }
+
+        function formatBudgetInput(input) {
+            let val = input.value.replace(/\D/g, '');
+            if (val === '') {
+                totalBudget = 0;
+                input.value = '';
+            } else {
+                totalBudget = parseInt(val);
+                input.value = totalBudget.toLocaleString('id-ID');
+            }
+            saveToLocalStorage();
+            updateSummary();
+        }
+
+        function parseIndonesianNumbers(text) {
+            let tokens = text.toLowerCase().split(/\s+/);
+            let resultTokens = [];
+            
+            for (let i = 0; i < tokens.length; i++) {
+                let tok = tokens[i];
+                if (wordToNum[tok] !== undefined) {
+                    resultTokens.push(wordToNum[tok].toString());
+                } else if (tok === 'ribu' || tok === 'rb' || tok === 'k') {
+                    if (resultTokens.length > 0 && !isNaN(resultTokens[resultTokens.length - 1])) {
+                        let prevNum = parseInt(resultTokens.pop());
+                        resultTokens.push((prevNum * 1000).toString());
+                    } else {
+                        resultTokens.push('1000');
+                    }
+                } else if (tok === 'juta' || tok === 'jt') {
+                    if (resultTokens.length > 0 && !isNaN(resultTokens[resultTokens.length - 1])) {
+                        let prevNum = parseInt(resultTokens.pop());
+                        resultTokens.push((prevNum * 1000000).toString());
+                    } else {
+                        resultTokens.push('1000000');
+                    }
+                } else if (tok === 'ratus') {
+                    if (resultTokens.length > 0 && !isNaN(resultTokens[resultTokens.length - 1])) {
+                        let prevNum = parseInt(resultTokens.pop());
+                        resultTokens.push((prevNum * 100).toString());
+                    } else {
+                        resultTokens.push('100');
+                    }
+                } else if (tok === 'puluh') {
+                    if (resultTokens.length > 0 && !isNaN(resultTokens[resultTokens.length - 1])) {
+                        let prevNum = parseInt(resultTokens.pop());
+                        resultTokens.push((prevNum * 10).toString());
+                    } else {
+                        resultTokens.push('10');
+                    }
+                } else {
+                    resultTokens.push(tok);
+                }
+            }
+            return resultTokens.join(' ');
+        }
+
+        function parseVoiceText(rawText) {
+            if (!rawText.trim()) return null;
+
+            let normalized = rawText.toLowerCase();
+            normalized = parseIndonesianNumbers(normalized);
+
+            normalized = normalized.replace(/(\d+)\s*(rb|k|ribu)/gi, (m, p1) => (parseInt(p1) * 1000).toString());
+            normalized = normalized.replace(/(\d+)\s*(jt|juta)/gi, (m, p1) => (parseInt(p1) * 1000000).toString());
+
+            normalized = normalized
+                .replace(/rp\.?/gi, '')
+                .replace(/rupiah/gi, '')
+                .replace(/\b(seharga|harga|beli|ambil|dapat|jumlahnya|jumlah|sebanyak|banyaknya|per)\b/gi, '')
+                .replace(/\b(biji|buah|pcs|ekor|botol|pack|bungkus|sak|ikat|sisir|kg|kilo|gram|liter)\b/gi, '');
+
+            let words = normalized.trim().split(/\s+/);
+            let numbersFound = [];
+            let nameWords = [];
+
+            for (let word of words) {
+                let cleanNum = word.replace(/\./g, '');
+                if (/^\d+$/.test(cleanNum)) {
+                    numbersFound.push(parseInt(cleanNum));
+                } else if (word.trim().length > 0) {
+                    nameWords.push(word);
+                }
+            }
+
+            let name = nameWords.join(' ') || 'Barang';
+            name = name.charAt(0).toUpperCase() + name.slice(1);
+
+            let price = 0;
+            let qty = 1;
+
+            if (numbersFound.length === 1) {
+                if (numbersFound[0] >= 50) {
+                    price = numbersFound[0];
+                } else {
+                    qty = numbersFound[0];
+                }
+            } else if (numbersFound.length >= 2) {
+                let n1 = numbersFound[0];
+                let n2 = numbersFound[1];
+                
+                if (n1 > n2) {
+                    price = n1;
+                    qty = n2;
+                } else {
+                    price = n2;
+                    qty = n1;
+                }
+            }
+
+            return { name, price, qty };
+        }
+
+        function processSmartInput() {
+            let raw = document.getElementById('rawInput').value;
+            if (!raw.trim()) return;
+
+            let parsed = parseVoiceText(raw);
+            if (parsed) {
+                if (fastMode) {
+                    addItemToShoppingList(parsed.name, parsed.price, parsed.qty);
+                    document.getElementById('rawInput').value = '';
+                } else {
+                    openModalForAdd(parsed.name, parsed.price, parsed.qty);
+                }
+            }
+        }
+
+        document.getElementById('rawInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                processSmartInput();
+            }
+        });
+
+        function openModalForAdd(name, price, qty) {
+            editingItemId = null;
+            document.getElementById('modalHeaderIcon').className = 'fa-solid fa-magnifying-glass';
+            document.getElementById('modalHeaderText').textContent = 'Konfirmasi Barang Belanja';
+            document.getElementById('btnModalIcon').className = 'fa-solid fa-plus';
+            document.getElementById('btnModalConfirmText').textContent = 'Tambahkan';
+            
+            document.getElementById('pName').value = name;
+            document.getElementById('pPrice').value = price;
+            document.getElementById('pQty').value = qty;
+            document.getElementById('modalOverlay').classList.add('active');
+        }
+
+        function openModalForEdit(id) {
+            const item = shoppingItems.find(i => i.id === id);
+            if (!item) return;
+
+            editingItemId = id;
+            document.getElementById('modalHeaderIcon').className = 'fa-solid fa-pen-to-square';
+            document.getElementById('modalHeaderText').textContent = 'Edit Barang Belanja';
+            document.getElementById('btnModalIcon').className = 'fa-solid fa-check';
+            document.getElementById('btnModalConfirmText').textContent = 'Simpan Perubahan';
+
+            document.getElementById('pName').value = item.name;
+            document.getElementById('pPrice').value = item.price;
+            document.getElementById('pQty').value = item.qty;
+            document.getElementById('modalOverlay').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('active');
+            editingItemId = null;
+        }
+
+        function confirmAddItem() {
+            let name = document.getElementById('pName').value.trim() || 'Barang';
+            let price = parseInt(document.getElementById('pPrice').value) || 0;
+            let qty = parseInt(document.getElementById('pQty').value) || 1;
+
+            if (editingItemId) {
+                updateExistingItem(editingItemId, name, price, qty);
+            } else {
+                addItemToShoppingList(name, price, qty);
+                document.getElementById('rawInput').value = '';
+            }
+            closeModal();
+        }
+
+        function addItemToShoppingList(name, price, qty) {
+            const newItem = {
+                id: Date.now(),
+                name: name,
+                price: price,
+                qty: qty
+            };
+
+            shoppingItems.unshift(newItem);
+            
+            if (navigator.vibrate) {
+                navigator.vibrate(60);
+            }
+
+            const totalSpent = shoppingItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
+            const remaining = totalBudget - totalSpent;
+
+            const totalItemCost = price * qty;
+            const detailText = `${name} (${qty}x ${formatRupiah(price)} = ${formatRupiah(totalItemCost)})`;
+            showItemToastNotification("BERHASIL DITAMBAHKAN", detailText);
+
+            // Detailed Spoken Format Requested by User:
+            // "Telur, harga 20 ribu rupiah, beli 3, total 60 ribu rupiah. Sisa saldo 940 ribu rupiah."
+            const spokenMsg = `${name}, harga ${formatSpokenRupiah(price)}, beli ${qty}, total ${formatSpokenRupiah(totalItemCost)}. Sisa saldo ${formatSpokenRupiah(remaining)}.`;
+            speakReadout(spokenMsg);
+
+            saveToLocalStorage();
+            renderItems();
+            updateSummary();
+        }
+
+        function updateExistingItem(id, name, price, qty) {
+            const itemIndex = shoppingItems.findIndex(i => i.id === id);
+            if (itemIndex !== -1) {
+                shoppingItems[itemIndex].name = name;
+                shoppingItems[itemIndex].price = price;
+                shoppingItems[itemIndex].qty = qty;
+
+                if (navigator.vibrate) navigator.vibrate(40);
+
+                const totalSpent = shoppingItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
+                const remaining = totalBudget - totalSpent;
+
+                const totalItemCost = price * qty;
+                const detailText = `${name} (${qty}x ${formatRupiah(price)} = ${formatRupiah(totalItemCost)})`;
+                showItemToastNotification("PERUBAHAN DISIMPAN", detailText);
+
+                const spokenMsg = `${name} diperbarui, harga ${formatSpokenRupiah(price)}, beli ${qty}, total ${formatSpokenRupiah(totalItemCost)}. Sisa saldo ${formatSpokenRupiah(remaining)}.`;
+                speakReadout(spokenMsg);
+
+                saveToLocalStorage();
+                renderItems();
+                updateSummary();
+            }
+        }
+
+        function showItemToastNotification(headerTitle, detailText) {
+            const toast = document.getElementById('addedItemToast');
+            document.getElementById('toastTitleHeader').textContent = headerTitle;
+            document.getElementById('toastDetail').textContent = detailText;
+            toast.classList.add('show');
+
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3500);
+        }
+
+        function hideToastNotification() {
+            document.getElementById('addedItemToast').classList.remove('show');
+        }
+
+        function changeQty(id, delta) {
+            let item = shoppingItems.find(i => i.id === id);
+            if (item) {
+                item.qty += delta;
+                if (item.qty <= 0) {
+                    removeItem(id);
+                } else {
+                    if (navigator.vibrate) navigator.vibrate(30);
+                    saveToLocalStorage();
+                    renderItems();
+                    updateSummary();
+
+                    const totalSpent = shoppingItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
+                    const remaining = totalBudget - totalSpent;
+                    const totalItemCost = item.price * item.qty;
+                    speakReadout(`${item.name} jadi ${item.qty} buah, total ${formatSpokenRupiah(totalItemCost)}. Sisa saldo ${formatSpokenRupiah(remaining)}.`);
+                }
+            }
+        }
+
+        function removeItem(id) {
+            let item = shoppingItems.find(i => i.id === id);
+            if (item) {
+                speakReadout(`${item.name} dihapus dari daftar.`);
+            }
+            shoppingItems = shoppingItems.filter(item => item.id !== id);
+            saveToLocalStorage();
+            renderItems();
+            updateSummary();
+        }
+
+        function resetAllItems() {
+            if (shoppingItems.length === 0) return;
+            if (confirm("Apakah Anda yakin ingin menghapus seluruh daftar belanja untuk mulai baru?")) {
+                shoppingItems = [];
+                saveToLocalStorage();
+                renderItems();
+                updateSummary();
+                speakReadout("Daftar belanjaan dikosongkan");
+            }
+        }
+
+        function saveCurrentSessionToHistory() {
+            if (shoppingItems.length === 0) {
+                alert("Daftar belanjaan masih kosong!");
+                return;
+            }
+
+            const totalSpent = shoppingItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
+            const dateStr = new Date().toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
+
+            const sessionEntry = {
+                id: Date.now(),
+                date: dateStr,
+                budget: totalBudget,
+                totalSpent: totalSpent,
+                itemCount: shoppingItems.length,
+                items: JSON.parse(JSON.stringify(shoppingItems))
+            };
+
+            shoppingHistory.unshift(sessionEntry);
+            saveToLocalStorage();
+            showItemToastNotification("SESI DISIMPAN", `Sesi ${dateStr} disimpan ke riwayat`);
+            speakReadout("Sesi belanja disimpan ke riwayat.");
+        }
+
+        function openHistoryModal() {
+            renderHistoryList();
+            document.getElementById('historyModalOverlay').classList.add('active');
+        }
+
+        function closeHistoryModal() {
+            document.getElementById('historyModalOverlay').classList.remove('active');
+        }
+
+        function renderHistoryList() {
+            const container = document.getElementById('historyListContainer');
+            if (shoppingHistory.length === 0) {
+                container.innerHTML = `<div style="text-align:center; padding:20px; color:#94a3b8; font-size:0.85rem;">Belum ada riwayat sesi belanja yang disimpan.</div>`;
+                return;
+            }
+
+            container.innerHTML = shoppingHistory.map(entry => {
+                return `
+                    <div class="history-card">
+                        <div class="history-info">
+                            <div class="history-date">${escapeHtml(entry.date)}</div>
+                            <div class="history-meta">${entry.itemCount} item • Total: ${formatRupiah(entry.totalSpent)}</div>
+                        </div>
+                        <div class="history-actions">
+                            <button class="btn-history-load" onclick="loadSessionFromHistory(${entry.id})">Muat</button>
+                            <button class="btn-history-del" onclick="deleteSessionFromHistory(${entry.id})"><i class="fa-solid fa-trash-can"></i></button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function loadSessionFromHistory(id) {
+            const entry = shoppingHistory.find(h => h.id === id);
+            if (!entry) return;
+
+            if (confirm(`Muat sesi belanja tanggal ${entry.date}? Sesi aktif sekarang akan diganti.`)) {
+                shoppingItems = JSON.parse(JSON.stringify(entry.items));
+                totalBudget = entry.budget;
+                document.getElementById('budgetInput').value = totalBudget.toLocaleString('id-ID');
+                
+                saveToLocalStorage();
+                renderItems();
+                updateSummary();
+                closeHistoryModal();
+                showItemToastNotification("SESI DIMUAT", `Sesi ${entry.date} dimuat`);
+                speakReadout(`Sesi belanja ${entry.date} dimuat.`);
+            }
+        }
+
+        function deleteSessionFromHistory(id) {
+            shoppingHistory = shoppingHistory.filter(h => h.id !== id);
+            saveToLocalStorage();
+            renderHistoryList();
+        }
+
+        function renderItems() {
+            let listEl = document.getElementById('itemList');
+            let countEl = document.getElementById('itemCount');
+
+            let displayedItems = shoppingItems;
+            if (searchQuery) {
+                displayedItems = shoppingItems.filter(item => 
+                    item.name.toLowerCase().includes(searchQuery)
+                );
+            }
+            
+            countEl.textContent = `${displayedItems.length} / ${shoppingItems.length} Item`;
+
+            if (shoppingItems.length === 0) {
+                listEl.innerHTML = `
+                    <li class="empty-state">
+                        <i class="fa-solid fa-basket-shopping"></i>
+                        Belum ada barang belanjaan.<br>
+                        Tekan tombol <strong>Bicara</strong> di bawah atau ketikkan barang Anda!
+                    </li>
+                `;
+                return;
+            }
+
+            if (displayedItems.length === 0 && searchQuery) {
+                listEl.innerHTML = `
+                    <li class="empty-state">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        Tidak ada barang yang cocok dengan <strong>"${escapeHtml(searchQuery)}"</strong>.<br>
+                        <button onclick="clearSearchInput()" style="margin-top:8px; padding:4px 10px; border-radius:6px; border:1px solid #cbd5e1; background:#f8fafc; font-size:0.8rem; cursor:pointer;">Clear Pencarian</button>
+                    </li>
+                `;
+                return;
+            }
+
+            listEl.innerHTML = displayedItems.map(item => {
+                let itemTotal = item.price * item.qty;
+                return `
+                    <li class="item-card">
+                        <div class="card-row-top">
+                            <div class="item-name">${escapeHtml(item.name)}</div>
+                            <div class="item-subtotal-group">
+                                <div class="subtotal-label">SUBTOTAL</div>
+                                <div class="item-subtotal-val">${formatRupiah(itemTotal)}</div>
+                            </div>
+                        </div>
+                        <div class="card-row-bottom">
+                            <div class="unit-price-tag">${formatRupiah(item.price)} /stn</div>
+                            <div class="card-controls-right">
+                                <div class="qty-pill">
+                                    <button class="btn-qty" onclick="changeQty(${item.id}, -1)">
+                                        <i class="fa-solid fa-minus"></i>
+                                    </button>
+                                    <span class="qty-num">${item.qty}</span>
+                                    <button class="btn-qty" onclick="changeQty(${item.id}, 1)">
+                                        <i class="fa-solid fa-plus"></i>
+                                    </button>
+                                </div>
+                                <button class="btn-card-icon edit-btn" onclick="openModalForEdit(${item.id})" title="Edit Barang">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+                                <button class="btn-card-icon delete-btn" onclick="removeItem(${item.id})" title="Hapus Barang">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </li>
+                `;
+            }).join('');
+        }
+
+        function updateSummary() {
+            let totalSpent = shoppingItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
+            let remaining = totalBudget - totalSpent;
+
+            document.getElementById('headerSpent').textContent = formatRupiah(totalSpent);
+            
+            let remEl = document.getElementById('headerRemaining');
+            remEl.textContent = formatRupiah(remaining);
+
+            remEl.className = 'remaining-summary';
+            if (remaining < 0) {
+                remEl.classList.add('danger');
+            } else if (remaining < (totalBudget * 0.2)) {
+                remEl.classList.add('warning');
+            }
+
+            // Progress Bar & Badge
+            let percent = 0;
+            if (totalBudget > 0) {
+                percent = Math.min(100, Math.round((totalSpent / totalBudget) * 100));
+            }
+            document.getElementById('progressPercentBadge').textContent = `(${percent}% terpakai)`;
+
+            let fillEl = document.getElementById('headerProgressBar');
+            fillEl.style.width = `${percent}%`;
+
+            if (percent < 70) {
+                fillEl.style.backgroundColor = '#16a34a';
+            } else if (percent < 90) {
+                fillEl.style.backgroundColor = '#ea580c';
+            } else {
+                fillEl.style.backgroundColor = '#dc2626';
+            }
+        }
+
+        function copySummaryToClipboard() {
+            if (shoppingItems.length === 0) {
+                alert("Daftar belanjaan masih kosong!");
+                return;
+            }
+
+            let totalSpent = shoppingItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
+            let remaining = totalBudget - totalSpent;
+
+            let text = `📋 *CATATAN BELANJA*\n`;
+            text += `💰 Target Anggaran: ${formatRupiah(totalBudget)}\n`;
+            text += `🛍️ Total Belanja: ${formatRupiah(totalSpent)}\n`;
+            text += `💵 Sisa Saldo: ${formatRupiah(remaining)}\n\n`;
+            text += `*Daftar Barang:*\n`;
+
+            shoppingItems.forEach((item, index) => {
+                text += `${index + 1}. ${item.name} (${formatRupiah(item.price)} x ${item.qty}) = ${formatRupiah(item.price * item.qty)}\n`;
+            });
+
+            navigator.clipboard.writeText(text).then(() => {
+                showItemToastNotification("SALIN RINGKASAN", "Ringkasan belanja disalin ke clipboard!");
+                speakReadout("Ringkasan belanja disalin ke clipboard.");
+            }).catch(err => {
+                alert("Ringkasan disalin!");
+            });
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/[&<>"']/g, function(m) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                }[m];
+            });
+        }
+    </script>
+</body>
+</html>
